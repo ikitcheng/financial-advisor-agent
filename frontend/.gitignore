@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+lib/
+lib64/
+# various egg formats
+*.egg-info/
+.installed.cfg
+*.egg
+# Distribution / packaging
+build/
+dist/
+develop-eggs/
+downloads/
+eggs/
+sdist/
+var/
+wheels/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Streamlit
+.streamlit/secrets.toml
+# You may also want to ignore other subfolders that store temporary data or user uploads
+# For example, if you have a folder named 'data' that stores generated data:
+# data/
+
+# IDEs and OS
+# VS Code
+.vscode/
+# other common IDE files (e.g. PyCharm, Sublime, etc.)
+.idea/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.stackdump
+
+# Project-specific/runtime files
+*.log
+*.temp
+temp/
+
+# Backup files
+*~
+\#*
+.\#*
