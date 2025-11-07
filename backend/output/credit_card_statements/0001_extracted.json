@@ -1,0 +1,229 @@
+{
+  "card_number": "0000 0000 0000 0000",
+  "cardholder_name": "XXX",
+  "statement_date": "2025-10-10",
+  "payment_due_date": "2025-11-04",
+  "credit_limit": "30,000.00 CNY",
+  "cash_advance_limit": "15,000.00 CNY",
+  "current_balance": "1,242.17 CNY",
+  "minimum_payment": "50.00 CNY",
+  "previous_balance": "6,265.70",
+  "payments_made": "5,482.20",
+  "new_charges": "1,502.43",
+  "adjustments": "-1,043.76",
+  "finance_charges": "0.00",
+  "total_points": "30159",
+  "points_earned": "834",
+  "transactions": [
+    {
+      "transaction_date": "2025-10-07",
+      "posting_date": "2025-10-07",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "60.00"
+    },
+    {
+      "transaction_date": "2025-10-07",
+      "posting_date": "2025-10-07",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "9.90"
+    },
+    {
+      "transaction_date": "2025-10-07",
+      "posting_date": "2025-10-07",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "13.90"
+    },
+    {
+      "transaction_date": "2025-10-07",
+      "posting_date": "2025-10-07",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "4.09"
+    },
+    {
+      "transaction_date": "2025-10-07",
+      "posting_date": "2025-10-07",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "199.00"
+    },
+    {
+      "transaction_date": "2025-10-07",
+      "posting_date": "2025-10-08",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "68.00"
+    },
+    {
+      "transaction_date": "2025-10-07",
+      "posting_date": "2025-10-08",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "11.40"
+    },
+    {
+      "transaction_date": "2025-10-07",
+      "posting_date": "2025-10-08",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "16.20"
+    },
+    {
+      "transaction_date": "2025-10-07",
+      "posting_date": "2025-10-08",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "50.00"
+    },
+    {
+      "transaction_date": "2025-10-07",
+      "posting_date": "2025-10-08",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "25.00"
+    },
+    {
+      "transaction_date": "2025-10-05",
+      "posting_date": "2025-10-05",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "85.13"
+    },
+    {
+      "transaction_date": "2025-10-05",
+      "posting_date": "2025-10-05",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "88.13"
+    },
+    {
+      "transaction_date": "2025-10-05",
+      "posting_date": "2025-10-05",
+      "description": "自扣还款",
+      "amount": "-5482.20"
+    },
+    {
+      "transaction_date": "2025-10-05",
+      "posting_date": "2025-10-05",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "-85.13"
+    },
+    {
+      "transaction_date": "2025-10-05",
+      "posting_date": "2025-10-05",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "-88.13"
+    },
+    {
+      "transaction_date": "2025-10-05",
+      "posting_date": "2025-10-05",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "43.00"
+    },
+    {
+      "transaction_date": "2025-10-05",
+      "posting_date": "2025-10-05",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "14.81"
+    },
+    {
+      "transaction_date": "2025-10-05",
+      "posting_date": "2025-10-05",
+      "description": "Alipay CHN Shanghai",
+      "amount": "87.00"
+    },
+    {
+      "transaction_date": "2025-10-05",
+      "posting_date": "2025-10-05",
+      "description": "UNIONPAY MERCHANT BEIJING CHN",
+      "amount": "-87.00"
+    },
+    {
+      "transaction_date": "2025-10-04",
+      "posting_date": "2025-10-05",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "185.00"
+    },
+    {
+      "transaction_date": "2025-10-04",
+      "posting_date": "2025-10-05",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "7.00"
+    },
+    {
+      "transaction_date": "2025-10-04",
+      "posting_date": "2025-10-05",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "13.50"
+    },
+    {
+      "transaction_date": "2025-10-04",
+      "posting_date": "2025-10-05",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "25.00"
+    },
+    {
+      "transaction_date": "2025-10-04",
+      "posting_date": "2025-10-05",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "35.00"
+    },
+    {
+      "transaction_date": "2025-10-01",
+      "posting_date": "2025-10-01",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "58.00"
+    },
+    {
+      "transaction_date": "2025-10-01",
+      "posting_date": "2025-10-01",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "11.00"
+    },
+    {
+      "transaction_date": "2025-10-01",
+      "posting_date": "2025-10-01",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "168.00"
+    },
+    {
+      "transaction_date": "2025-10-01",
+      "posting_date": "2025-10-01",
+      "description": "Alipay CHN Shanghai",
+      "amount": "165.00"
+    },
+    {
+      "transaction_date": "2025-10-01",
+      "posting_date": "2025-10-01",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "2.00"
+    },
+    {
+      "transaction_date": "2025-10-01",
+      "posting_date": "2025-10-01",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "7.00"
+    },
+    {
+      "transaction_date": "2025-09-30",
+      "posting_date": "2025-09-30",
+      "description": "Alipay CHN Shanghai",
+      "amount": "15.67"
+    },
+    {
+      "transaction_date": "2025-09-25",
+      "posting_date": "2025-09-26",
+      "description": "Alipay Shanghai CHN",
+      "amount": "14.70"
+    },
+    {
+      "transaction_date": "2025-09-14",
+      "posting_date": "2025-09-15",
+      "description": "Tenpay Technology Company Limited",
+      "amount": "20.00"
+    },
+    {
+      "transaction_date": "2025-09-11",
+      "posting_date": "2025-09-11",
+      "description": "ALIPAY NETWORK TECH BEIJING CHN",
+      "amount": "-783.50"
+    }
+  ],
+  "transaction_summary": {
+    "total_transactions": 34,
+    "total_debits": 1502.43,
+    "total_credits": 6525.96,
+    "net_change": -5023.53
+  }
+}
