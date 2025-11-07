@@ -4,6 +4,7 @@ import requests
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pathlib import Path
+from schema_templates import get_schema_for_document_type
 
 
 class ADEClient:
@@ -72,54 +73,8 @@ class CreditCardStatementPipeline:
     
     def _get_credit_card_schema(self) -> Dict:
         """Define the JSON schema for credit card statement extraction"""
-        return {
-            "type": "object",
-            "properties": {
-                "card_info": {
-                    "type": "object",
-                    "properties": {
-                        "card_number": {"type": "string", "description": "Last 4 digits or masked card number"},
-                        "cardholder_name": {"type": "string"},
-                        "statement_date": {"type": "string", "format": "date"},
-                        "payment_due_date": {"type": "string", "format": "date"},
-                        "address": {"type": "string"}
-                    },
-                    "required": ["card_number", "cardholder_name", "statement_date"]
-                },
-                "account_summary": {
-                    "type": "object",
-                    "properties": {
-                        "currency": {"type": "string"},
-                        "credit_limit": {"type": "number"},
-                        "cash_advance_limit": {"type": "number"},
-                        "current_balance": {"type": "number"},
-                        "minimum_payment": {"type": "number"},
-                        "previous_balance": {"type": "number"},
-                        "payments_received": {"type": "number"},
-                        "new_charges": {"type": "number"},
-                        "adjustments": {"type": "number"},
-                        "finance_charges": {"type": "number"},
-                        "total_points": {"type": "integer"}
-                    },
-                    "required": ["currency", "current_balance", "minimum_payment"]
-                },
-                "transactions": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "transaction_date": {"type": "string", "format": "date"},
-                            "posting_date": {"type": "string", "format": "date"},
-                            "description": {"type": "string"},
-                            "amount": {"type": "number"},
-                            "card_last_four": {"type": "string"}
-                        },
-                        "required": ["transaction_date", "description", "amount"]
-                    }
-                }
-            },
-            "required": ["card_info", "account_summary", "transactions"]
-        }
+        credit_card_schema = get_schema_for_document_type("credit_card")
+        return credit_card_schema
     
     def process_statement(
         self,
@@ -159,7 +114,7 @@ class CreditCardStatementPipeline:
         
         print(f"🔍 Extracting structured data...")
         extract_result = self.client.extract_structured_data(markdown, self.schema)
-        structured_data = extract_result.get("data", {}) # return empty json if no structured data found
+        structured_data = extract_result.get("extraction", {}) # return empty json if no structured data found
         
         # Post-process and validate
         print(f"🔍 Post-processing structured data to get transaction summary...")
@@ -180,6 +135,38 @@ class CreditCardStatementPipeline:
             }
         }
     
+    def load_markdown_file(self, markdown_path: str) -> str:
+        """
+        Load a previously saved markdown file
+        
+        Args:
+            markdown_path: Path to the markdown file to load
+            
+        Returns:
+            String containing the markdown content
+            
+        Raises:
+            FileNotFoundError: If the markdown file doesn't exist
+            UnicodeDecodeError: If the file cannot be decoded as UTF-8
+        """
+        markdown_path = Path(markdown_path)
+        
+        if not markdown_path.exists():
+            raise FileNotFoundError(f"Markdown file not found: {markdown_path}")
+        
+        if not markdown_path.suffix.lower() == '.md':
+            raise ValueError(f"File is not a markdown file: {markdown_path}")
+        
+        try:
+            with open(markdown_path, "r", encoding="utf-8") as f:
+                markdown_content = f.read()
+            
+            print(f"✅ Loaded markdown file: {markdown_path}")
+            return markdown_content
+            
+        except UnicodeDecodeError as e:
+            raise UnicodeDecodeError(f"Could not decode markdown file as UTF-8: {markdown_path}") from e
+        
     def _post_process(self, data: Dict) -> Dict:
         """Post-process extracted json data for consistency"""
         # Sort transactions by date (descending)
@@ -192,9 +179,9 @@ class CreditCardStatementPipeline:
         # Calculate transaction statistics
         if "transactions" in data:
             transactions = data["transactions"]
-            total_debits = sum(t["amount"] for t in transactions if t["amount"] > 0)
-            total_credits = sum(abs(t["amount"]) for t in transactions if t["amount"] < 0)
-            
+            total_debits = sum(float(t["amount"]) for t in transactions if float(t["amount"]) > 0)
+            total_credits = sum(abs(float(t["amount"])) for t in transactions if float(t["amount"]) < 0)
+
             data["transaction_summary"] = {
                 "total_transactions": len(transactions),
                 "total_debits": round(total_debits, 2),
@@ -270,8 +257,8 @@ if __name__ == "__main__":
     
     # Process single statement
     result = pipeline.process_statement(
-        file_path="0001.pdf",
-        output_dir="./output",
+        file_path="../uploads/credit_card_statements/0001.pdf",
+        output_dir="../output/credit_card_statements/",
         save_markdown=True,
         save_json=True
     )
@@ -279,11 +266,10 @@ if __name__ == "__main__":
     print("\n" + "="*60)
     print("PROCESSING SUMMARY")
     print("="*60)
-    print(f"Card: {result['structured_data'].get('card_info', {}).get('cardholder_name', 'N/A')}")
-    print(f"Balance: {result['structured_data'].get('account_summary', {}).get('current_balance', 0)} "
-          f"{result['structured_data'].get('account_summary', {}).get('currency', 'N/A')}")
+    print(f"Card: {result['structured_data'].get('cardholder_name', 'N/A')}")
+    print(f"Balance: {result['structured_data'].get('current_balance', 0)}")
     print(f"Transactions: {len(result['structured_data'].get('transactions', []))}")
-    
+
     # Batch processing example (uncomment to use)
     # results = pipeline.batch_process(
     #     file_paths=["statement1.pdf", "statement2.pdf", "statement3.pdf"],
