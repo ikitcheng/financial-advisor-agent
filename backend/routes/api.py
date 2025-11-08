@@ -130,7 +130,6 @@ async def upload_file_and_process(
         "file_name": file_name,
         "session_id": session_id,
         "status": "Processing complete and results stored.",
-        "summary": extraction_data.summary
     }
 
 @router.post("/{session_id}/send_message")
