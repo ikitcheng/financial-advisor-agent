@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from services.api import router
+from routes import api
 
 # --- FastAPI Application Setup ---
 app = FastAPI(
@@ -10,7 +10,7 @@ app = FastAPI(
 
 # Include the router containing all API endpoints
 app.include_router(
-    router,
+    api.router,
     prefix="/api/v1", # All endpoints will start with /api/v1
     tags=["Analysis Service"]
 )
@@ -21,4 +21,5 @@ def read_root():
     return {"message": "Credit Card Analysis Backend is running! (FastAPI)"}
 
 # To run this server locally, you would execute:
-# uvicorn backend.main:app --reload
+# cd backend
+# uvicorn main:app --reload
