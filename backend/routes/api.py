@@ -7,8 +7,8 @@ from pydantic import BaseModel
 from pathlib import Path
 
 # Import the mock database client (assuming relative path within 'service' directory)
-from .db_storage import db_client 
-from .landing_ai_ade import pipeline
+from services.db_storage import db_client 
+from services.finance_logic import CreditCardStatementPipeline
 
 # --- Configuration ---
 # NOTE: These paths are simulated. In a real environment, they must exist.
@@ -107,6 +107,7 @@ async def upload_file_and_process(
     # 2. Call the document processing function (MOCK)
     try:
         # extraction_data = process_document(mock_upload_filepath, output_path, file_name)
+        pipeline = CreditCardStatementPipeline()
         extraction_data = pipeline.process_statement(
             file_path=mock_upload_filepath,
             output_dir=output_path,
