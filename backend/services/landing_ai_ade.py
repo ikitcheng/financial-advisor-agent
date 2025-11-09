@@ -4,6 +4,8 @@ import requests
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pathlib import Path
+import statistics
+from collections import defaultdict
 from .schema_templates import get_schema_for_document_type
 import doctest
 from dotenv import load_dotenv
@@ -66,6 +68,14 @@ class ADEClient:
         resp.raise_for_status()
         return resp.json()
 
+def safe_float(value):
+    """Convert string values like '5,000,000' or '$2M' into float safely."""
+    if value is None:
+        return 0.0
+    try:
+        return float(str(value).replace(",", "").replace("$", "").strip())
+    except Exception:
+        return 0.0
 
 class CreditCardStatementPipeline:
     """Pipeline for processing credit card statements"""
@@ -182,8 +192,8 @@ class CreditCardStatementPipeline:
         # Calculate transaction statistics
         if "transactions" in data:
             transactions = data["transactions"]
-            total_debits = sum(float(t["amount"]) for t in transactions if float(t["amount"]) > 0)
-            total_credits = sum(abs(float(t["amount"])) for t in transactions if float(t["amount"]) < 0)
+            total_debits = sum(safe_float(t["amount"]) for t in transactions if safe_float(t["amount"]) > 0)
+            total_credits = sum(abs(safe_float(t["amount"])) for t in transactions if safe_float(t["amount"]) < 0)
 
             data["transaction_summary"] = {
                 "total_transactions": len(transactions),
@@ -193,6 +203,365 @@ class CreditCardStatementPipeline:
             }
         
         return data
+    
+    def analyze_monthly_trends(
+        self,
+        statements_data: List[Dict[str, Any]],
+        analysis_months: int = 12
+    ) -> Dict[str, Any]:
+        """
+        Perform comprehensive monthly trend analysis on credit card statements
+        
+        Args:
+            statements_data: List of structured statement data (JSON format)
+            analysis_months: Number of months to analyze (default: 12)
+            
+        Returns:
+            Dict containing comprehensive trend analysis including:
+            - Monthly spending patterns
+            - Category analysis
+            - Financial health indicators
+            - Seasonal trends
+            - Recommendations for budgeting and investing
+        """
+        if not statements_data:
+            return {"error": "No statement data provided"}
+        
+        # Initialize analysis containers
+        monthly_data = defaultdict(lambda: {
+            'total_spending': 0.0,
+            'total_payments': 0.0,
+            'balance': 0.0,
+            'transactions': [],
+            'categories': defaultdict(float),
+            'transaction_count': 0
+        })
+        
+        all_transactions = []
+        balances = []
+        payment_amounts = []
+        spending_amounts = []
+        
+        # Process each statement
+        for statement in statements_data:
+            statement_date = statement.get('statement_date', '')
+            if not statement_date:
+                continue
+                
+            try:
+                stmt_date = datetime.strptime(statement_date, '%Y-%m-%d')
+                month_key = stmt_date.strftime('%Y-%m')
+            except ValueError:
+                continue
+            
+            # Extract key financial metrics
+            current_balance = safe_float(statement.get('current_balance', '0').replace('CNY', '').strip())
+            payments_made = safe_float(statement.get('payments_made', '0'))
+            
+            monthly_data[month_key]['balance'] = current_balance
+            monthly_data[month_key]['total_payments'] = payments_made
+            
+            balances.append(current_balance)
+            if payments_made > 0:
+                payment_amounts.append(payments_made)
+            
+            # Process transactions
+            transactions = statement.get('transactions', [])
+            for transaction in transactions:
+                amount = safe_float(transaction.get('amount', '0'))
+                description = transaction.get('description', '').lower()
+                
+                all_transactions.append({
+                    'date': transaction.get('transaction_date', ''),
+                    'amount': amount,
+                    'description': description,
+                    'month': month_key
+                })
+                
+                monthly_data[month_key]['transactions'].append(transaction)
+                monthly_data[month_key]['transaction_count'] += 1
+                
+                # Categorize spending (positive amounts are debits/spending)
+                if amount > 0:
+                    monthly_data[month_key]['total_spending'] += amount
+                    spending_amounts.append(amount)
+                    
+                    # Categorize transactions
+                    category = self._categorize_transaction(description)
+                    monthly_data[month_key]['categories'][category] += amount
+        
+        # Sort months chronologically
+        sorted_months = sorted(monthly_data.keys())
+        
+        # Calculate trend analysis
+        analysis = {
+            'analysis_period': {
+                'start_month': sorted_months[0] if sorted_months else None,
+                'end_month': sorted_months[-1] if sorted_months else None,
+                'total_months': len(sorted_months)
+            },
+            'monthly_summary': dict(monthly_data),
+            'spending_trends': self._analyze_spending_trends(monthly_data, sorted_months),
+            'category_analysis': self._analyze_categories(monthly_data),
+            'financial_health_score': self._calculate_financial_health_score(monthly_data, balances, payment_amounts),
+            'seasonal_patterns': self._analyze_seasonal_patterns(monthly_data),
+            'recommendations': self._generate_recommendations(monthly_data, balances, payment_amounts, spending_amounts)
+        }
+        
+        return analysis
+    
+    def _categorize_transaction(self, description: str) -> str:
+        """Categorize transactions based on description"""
+        description = description.lower()
+        
+        # Payment platforms
+        if any(platform in description for platform in ['tenpay', 'alipay', 'unionpay']):
+            if any(food_term in description for food_term in ['restaurant', 'food', 'dining']):
+                return 'dining'
+            elif any(shop_term in description for shop_term in ['shop', 'mall', 'store']):
+                return 'shopping'
+            else:
+                return 'digital_payments'
+        
+        # Common categories
+        if any(term in description for term in ['grocery', 'supermarket', 'food']):
+            return 'groceries'
+        elif any(term in description for term in ['gas', 'fuel', 'petrol']):
+            return 'transportation'
+        elif any(term in description for term in ['restaurant', 'dining', 'cafe']):
+            return 'dining'
+        elif any(term in description for term in ['shopping', 'retail', 'store']):
+            return 'shopping'
+        elif any(term in description for term in ['entertainment', 'movie', 'game']):
+            return 'entertainment'
+        elif any(term in description for term in ['medical', 'hospital', 'pharmacy']):
+            return 'healthcare'
+        elif any(term in description for term in ['payment', 'repayment', '自扣还款']):
+            return 'payments'
+        else:
+            return 'other'
+    
+    def _analyze_spending_trends(self, monthly_data: Dict, sorted_months: List[str]) -> Dict:
+        """Analyze spending trends over time"""
+        if len(sorted_months) < 2:
+            return {'trend': 'insufficient_data'}
+        
+        spending_by_month = [monthly_data[month]['total_spending'] for month in sorted_months]
+        
+        # Calculate trend
+        if len(spending_by_month) >= 3:
+            recent_avg = statistics.mean(spending_by_month[-3:])
+            earlier_avg = statistics.mean(spending_by_month[:-3]) if len(spending_by_month) > 3 else spending_by_month[0]
+            trend_direction = 'increasing' if recent_avg > earlier_avg * 1.1 else 'decreasing' if recent_avg < earlier_avg * 0.9 else 'stable'
+        else:
+            trend_direction = 'increasing' if spending_by_month[-1] > spending_by_month[0] else 'decreasing'
+        
+        return {
+            'trend_direction': trend_direction,
+            'average_monthly_spending': statistics.mean(spending_by_month) if spending_by_month else 0,
+            'median_monthly_spending': statistics.median(spending_by_month) if spending_by_month else 0,
+            'highest_spending_month': {
+                'month': sorted_months[spending_by_month.index(max(spending_by_month))],
+                'amount': max(spending_by_month)
+            } if spending_by_month else None,
+            'lowest_spending_month': {
+                'month': sorted_months[spending_by_month.index(min(spending_by_month))],
+                'amount': min(spending_by_month)
+            } if spending_by_month else None,
+            'spending_volatility': statistics.stdev(spending_by_month) if len(spending_by_month) > 1 else 0
+        }
+    
+    def _analyze_categories(self, monthly_data: Dict) -> Dict:
+        """Analyze spending patterns by category"""
+        total_category_spending = defaultdict(float)
+        category_months = defaultdict(int)
+        
+        for month_data in monthly_data.values():
+            for category, amount in month_data['categories'].items():
+                total_category_spending[category] += amount
+                if amount > 0:
+                    category_months[category] += 1
+        
+        total_spending = sum(total_category_spending.values())
+        
+        category_analysis = {}
+        for category, amount in total_category_spending.items():
+            percentage = (amount / total_spending * 100) if total_spending > 0 else 0
+            category_analysis[category] = {
+                'total_amount': round(amount, 2),
+                'percentage_of_total': round(percentage, 2),
+                'average_monthly': round(amount / len(monthly_data), 2) if monthly_data else 0,
+                'months_active': category_months[category]
+            }
+        
+        # Sort by total amount
+        sorted_categories = sorted(category_analysis.items(), key=lambda x: x[1]['total_amount'], reverse=True)
+        
+        return {
+            'category_breakdown': dict(sorted_categories),
+            'top_spending_category': sorted_categories[0][0] if sorted_categories else None,
+            'most_frequent_category': max(category_months.items(), key=lambda x: x[1])[0] if category_months else None
+        }
+    
+    def _calculate_financial_health_score(self, monthly_data: Dict, balances: List[float], payment_amounts: List[float]) -> Dict:
+        """Calculate a financial health score based on various metrics"""
+        if not monthly_data:
+            return {'score': 0, 'rating': 'insufficient_data'}
+        
+        score = 100  # Start with perfect score
+        
+        # Balance trend analysis
+        if len(balances) >= 2:
+            balance_trend = (balances[-1] - balances[0]) / len(balances)
+            if balance_trend > 0:
+                score -= 20  # Increasing balance is concerning
+            elif balance_trend < -100:
+                score += 10  # Significant balance reduction is good
+        
+        # Payment consistency
+        if payment_amounts:
+            payment_regularity = len(payment_amounts) / len(monthly_data)
+            if payment_regularity < 0.8:
+                score -= 15  # Irregular payments
+            elif payment_regularity == 1.0:
+                score += 10  # Perfect payment record
+        
+        # Spending stability
+        spending_amounts = [data['total_spending'] for data in monthly_data.values()]
+        if len(spending_amounts) > 1:
+            spending_volatility = statistics.stdev(spending_amounts) / statistics.mean(spending_amounts) if statistics.mean(spending_amounts) > 0 else 0
+            if spending_volatility > 0.5:
+                score -= 10  # High volatility is concerning
+            elif spending_volatility < 0.2:
+                score += 5  # Low volatility is good
+        
+        # Credit utilization (assuming average balance vs typical spending patterns)
+        if balances and spending_amounts:
+            avg_balance = statistics.mean(balances)
+            avg_spending = statistics.mean(spending_amounts)
+            if avg_balance > avg_spending * 2:
+                score -= 15  # High utilization
+        
+        # Ensure score is within bounds
+        score = max(0, min(100, score))
+        
+        # Rating classification
+        if score >= 85:
+            rating = 'excellent'
+        elif score >= 70:
+            rating = 'good'
+        elif score >= 55:
+            rating = 'fair'
+        elif score >= 40:
+            rating = 'poor'
+        else:
+            rating = 'critical'
+        
+        return {
+            'score': round(score, 1),
+            'rating': rating,
+            'factors': {
+                'balance_management': 'good' if len(balances) < 2 or balances[-1] <= balances[0] else 'needs_improvement',
+                'payment_consistency': 'good' if not payment_amounts or len(payment_amounts) / len(monthly_data) >= 0.8 else 'needs_improvement',
+                'spending_stability': 'good' if len(spending_amounts) <= 1 or (statistics.stdev(spending_amounts) / statistics.mean(spending_amounts) < 0.3) else 'needs_improvement'
+            }
+        }
+    
+    def _analyze_seasonal_patterns(self, monthly_data: Dict) -> Dict:
+        """Analyze seasonal spending patterns"""
+        seasonal_spending = defaultdict(list)
+        
+        for month_key, data in monthly_data.items():
+            try:
+                month_num = int(month_key.split('-')[1])
+                if month_num in [12, 1, 2]:
+                    season = 'winter'
+                elif month_num in [3, 4, 5]:
+                    season = 'spring'
+                elif month_num in [6, 7, 8]:
+                    season = 'summer'
+                else:
+                    season = 'autumn'
+                
+                seasonal_spending[season].append(data['total_spending'])
+            except (ValueError, IndexError):
+                continue
+        
+        seasonal_analysis = {}
+        for season, amounts in seasonal_spending.items():
+            if amounts:
+                seasonal_analysis[season] = {
+                    'average_spending': round(statistics.mean(amounts), 2),
+                    'total_spending': round(sum(amounts), 2),
+                    'months_data': len(amounts)
+                }
+        
+        # Find highest spending season
+        highest_season = max(seasonal_analysis.items(), key=lambda x: x[1]['average_spending']) if seasonal_analysis else None
+        
+        return {
+            'seasonal_breakdown': seasonal_analysis,
+            'highest_spending_season': highest_season[0] if highest_season else None
+        }
+    
+    def _generate_recommendations(self, monthly_data: Dict, balances: List[float], payment_amounts: List[float], spending_amounts: List[float]) -> Dict:
+        """Generate personalized financial recommendations"""
+        recommendations = {
+            'budgeting': [],
+            'investing': [],
+            'debt_management': [],
+            'general': []
+        }
+        
+        if not monthly_data:
+            return recommendations
+        
+        avg_spending = statistics.mean(spending_amounts) if spending_amounts else 0
+        avg_balance = statistics.mean(balances) if balances else 0
+        
+        # Budgeting recommendations
+        if spending_amounts and len(spending_amounts) > 1:
+            spending_volatility = statistics.stdev(spending_amounts) / statistics.mean(spending_amounts)
+            if spending_volatility > 0.3:
+                recommendations['budgeting'].append("Consider creating a monthly budget to reduce spending volatility")
+        
+        # Category-based recommendations
+        category_totals = defaultdict(float)
+        for data in monthly_data.values():
+            for category, amount in data['categories'].items():
+                category_totals[category] += amount
+        
+        total_spending = sum(category_totals.values())
+        if total_spending > 0:
+            for category, amount in category_totals.items():
+                percentage = amount / total_spending
+                if percentage > 0.3:
+                    recommendations['budgeting'].append(f"Consider reducing {category} expenses - currently {percentage:.1%} of total spending")
+        
+        # Investment recommendations
+        if avg_balance < avg_spending * 0.5:
+            recommendations['investing'].append("Your low balance suggests focusing on emergency savings before investing")
+        elif avg_balance > avg_spending * 3:
+            recommendations['investing'].append("Consider investing excess funds in diversified portfolios for long-term growth")
+            recommendations['investing'].append("Look into index funds or ETFs for steady, long-term returns")
+        
+        # Debt management
+        if balances and balances[-1] > avg_spending * 2:
+            recommendations['debt_management'].append("Consider paying more than the minimum to reduce high balance")
+            recommendations['debt_management'].append("Look into balance transfer options if interest rates are high")
+        
+        # Payment consistency
+        if payment_amounts and len(payment_amounts) < len(monthly_data) * 0.8:
+            recommendations['debt_management'].append("Set up automatic payments to ensure consistent payment history")
+        
+        # General recommendations
+        recommendations['general'].append("Review statements monthly to track spending patterns")
+        recommendations['general'].append("Consider using budgeting apps to monitor expenses in real-time")
+        
+        if avg_spending > 0:
+            recommendations['general'].append(f"Your average spending per transaction is {avg_spending:.2f} CNY - track this against your income")
+        
+        return recommendations
     
     def batch_process(
         self,

@@ -30,6 +30,9 @@ if 'saved_chats' not in st.session_state:
     st.session_state.saved_chats = []
 if 'session_id' not in st.session_state:
     st.session_state.session_id = None
+# New: Add a unique key for the file uploader component
+if 'upload_key' not in st.session_state:
+    st.session_state.upload_key = 0
 
 # --- 2. API Helper Function ---
 
@@ -317,7 +320,7 @@ with st.sidebar:
             new_id = get_new_session_id()
             if new_id:
                 st.session_state.session_id = new_id
-                # Reset active chat and navigate
+                # Reset active chat and navigation page
                 st.session_state.chat_history = [
                     {"role": "assistant", "content": "Hello! I'm your Credit Card Spending Analysis Assistant. Please upload your files or ask any questions about your spending."}
                 ]
@@ -330,10 +333,12 @@ with st.sidebar:
     st.markdown("---")
     
     # 2. Upload Files (Updated to call FastAPI)
+    # Use the session state key to enable resetting
     uploaded_files = st.file_uploader(
         "📂 Upload Files (PDF, JPG, TXT)",
         type=['pdf', 'jpg', 'jpeg', 'png', 'txt'],
         accept_multiple_files=True,
+        key=f"file_uploader_{st.session_state.upload_key}", # Use the unique key here
         help="Upload your spending records, bill screenshots, etc., for analysis."
     )
     
@@ -360,7 +365,7 @@ with st.sidebar:
                         # Add a system message to chat history confirming the upload
                         st.session_state.chat_history.append({
                             "role": "assistant",
-                            "content": f"Successfully processed file **{file.name}**! Backend summary: {backend_data.get('summary', 'Data extraction complete.')}"
+                            "content": f"Successfully processed file **{file.name}**!"
                         })
 
                     else:
@@ -381,7 +386,13 @@ with st.sidebar:
 
         if successful_uploads:
             st.toast(f"Successfully processed {len(successful_uploads)}/{len(uploaded_files)} files.")
-            st.rerun() # Rerun to update chat history with success message
+            
+            # --- CRITICAL FIX: Reset the file uploader component key ---
+            # This makes Streamlit re-render the file uploader as empty on the next rerun,
+            # preventing the infinite loop.
+            st.session_state.upload_key += 1
+            
+            st.rerun() # Rerun to update chat history with success message and use new key
             
     elif uploaded_files and not st.session_state.session_id:
         st.warning("Cannot upload files. Please ensure the FastAPI backend is running and a session ID is generated.")
