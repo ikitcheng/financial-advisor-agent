@@ -142,10 +142,10 @@ class CreditCardStatementPipeline:
         return {
             "markdown": markdown,
             "structured_data": structured_data,
-            "metadata": {
-                "source_file": str(file_path),
-                "processed_at": datetime.now().isoformat()
-            }
+            # "metadata": {
+            #     "source_file": str(file_path),
+            #     "processed_at": datetime.now().isoformat()
+            # }
         }
     
     def load_markdown_file(self, markdown_path: str) -> str:

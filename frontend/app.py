@@ -3,12 +3,11 @@ import pandas as pd
 import plotly.express as px
 import random
 from datetime import datetime, timedelta
-import requests # New Import: Required for making HTTP requests to FastAPI backend
-import json     # New Import
+import requests 
+import json     
+import uuid
 
 # --- 1. Configuration and Initialization ---
-# Define FastAPI Backend URL (Change this if your backend runs on a different address/port)
-# NOTE: Ensure the FastAPI service is running (uvicorn backend.main:app --reload)
 FASTAPI_BASE_URL = "http://localhost:8000/api/v1" 
 
 # Set page configuration
@@ -18,27 +17,49 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialize session state for navigation, chat history, saved history, and session ID
-if 'page' not in st.session_state:
-    st.session_state.page = 'chat'
-if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = [
-        {"role": "assistant", "content": "Hello! I'm your Credit Card Spending Analysis Assistant. Please upload your files or ask any questions about your spending."}
-    ]
-if 'saved_chats' not in st.session_state:
-    # List to store all previous chat sessions
-    st.session_state.saved_chats = []
-if 'session_id' not in st.session_state:
-    st.session_state.session_id = None
-# New: Add a unique key for the file uploader component
-if 'upload_key' not in st.session_state:
-    st.session_state.upload_key = 0
+# --- Persistence and Initialization Helper ---
+
+def initialize_persistence_and_state():
+    """Initializes user_id (simulated persistence) and session state."""
+    
+    # 1. User ID Initialization (Simulated Cookie Persistence)
+    # The 'user_id' acts as the primary key for all saved data across sessions.
+    # We use st.session_state as a simple persistence mechanism across reruns.
+    if 'user_id' not in st.session_state:
+        # In a real app, this would read from a cookie or localStorage.
+        # Here we generate a unique ID and treat st.session_state as persistent across one user's reruns.
+        st.session_state.user_id = str(uuid.uuid4())
+        
+    # 2. Session ID Initialization (Ephemeral per active chat)
+    # The 'session_id' is the FastAPI backend chat session ID, which is cleared on 'New Chat'.
+    if 'session_id' not in st.session_state:
+        st.session_state.session_id = None
+        
+    # 3. Frontend UI State
+    if 'page' not in st.session_state:
+        st.session_state.page = 'chat'
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = [
+            {"role": "assistant", "content": "Hello! I'm your Credit Card Spending Analysis Assistant. Please upload your files or ask any questions about your spending."}
+        ]
+    if 'saved_chats' not in st.session_state:
+        # List to store all previous chat sessions associated with the current user_id
+        st.session_state.saved_chats = []
+        
+    # 4. File Uploader Key (CRITICAL for clearing uploads)
+    if 'upload_key' not in st.session_state:
+        st.session_state.upload_key = 0
+
+# Run initialization
+initialize_persistence_and_state()
+
 
 # --- 2. API Helper Function ---
 
 def get_new_session_id():
     """Calls FastAPI to generate a new session ID."""
     try:
+        # NOTE: If we wanted the backend to use the user_id, we would pass it here.
         response = requests.post(f"{FASTAPI_BASE_URL}/sessions/new")
         if response.status_code == 200:
             return response.json().get("session_id")
@@ -253,11 +274,11 @@ def render_dashboard():
     )
     st.plotly_chart(fig_line, use_container_width=True)
 
-# --- 6. Chat History List Rendering Function (Unchanged) ---
+# --- 6. Chat History List Rendering Function (Unchanged in logic) ---
 
 def render_chat_history_list():
     st.header("🕰️ Chat History List")
-    st.info("Click on a chat summary card to load and resume the conversation.")
+    st.info(f"Showing saved chats for User ID: **{st.session_state.user_id}**")
 
     if not st.session_state.saved_chats:
         st.warning("No previous chat history saved yet.")
@@ -274,8 +295,10 @@ def render_chat_history_list():
         # Determine which column to place the card in
         with cols[i % 3]: 
             with st.container(border=True):
-                st.markdown(f"**Chat ID:** {chat_session['id']}")
+                # The ID here is the internal saved_chats index, not the backend session_id
+                st.markdown(f"**Chat Ref ID:** {chat_session['id']}") 
                 st.markdown(f"**Topic:** {chat_session['topic']}")
+                st.markdown(f"**Backend Session ID:** {chat_session['backend_session_id'][:8]}...")
                 st.markdown(f"**Messages:** {len(chat_session['history']) - 1} (excluding greeting)")
                 st.caption(f"Saved: {chat_session['timestamp']}")
                 
@@ -283,44 +306,61 @@ def render_chat_history_list():
                 if st.button("Load Chat", key=f"load_{chat_session['id']}", use_container_width=True):
                     # Load the selected chat into the active session
                     st.session_state.chat_history = chat_session['history']
+                    st.session_state.session_id = chat_session['backend_session_id'] # Important: Re-use the backend session ID (if still valid)
                     st.session_state.page = 'chat'
                     st.toast(f"Loaded chat: {chat_session['topic']}")
                     st.rerun()
 
-# --- 7. Sidebar (Updated for API Integration) ---
+# --- 7. Sidebar (Updated for New Chat and Persistence) ---
 
 with st.sidebar:
     st.title("💳 Smart Spending Analysis")
     st.markdown("---")
     
-    # Display session ID for debugging
+    # Display user and session IDs for debugging
+    st.caption(f"App User ID: **{st.session_state.user_id}**")
     st.caption(f"Current Session ID: **{st.session_state.session_id or 'N/A'}**")
 
-    # 1. New Chat (Now includes saving logic and new session ID request)
-    if st.button("✨ New Chat", use_container_width=True, type="primary", help="Start a brand new conversation"):
+    # 1. New Chat (Updated to clear file uploader and handle topic extraction)
+    if st.button("✨ New Chat", use_container_width=True, type="primary", help="Start a brand new conversation and clear the file uploader."):
         if st.session_state.session_id: # Only proceed if connected/initialized
-            # --- Save Old Chat Logic ---
+            
+            # --- 1. Save Old Chat Logic ---
+            # Condition: Save if history length > 1 (meaning, there was user chat OR file upload confirmation)
             if len(st.session_state.chat_history) > 1:
                 
-                first_user_prompt = next((msg['content'] for msg in st.session_state.chat_history if msg['role'] == 'user'), "Untitled Chat")
-                topic = first_user_prompt.split('?')[0].split('.')[0][:50].strip()
-                if len(topic) >= 50:
-                    topic += "..."
+                # Try to find the first user prompt (only messages with role 'user')
+                first_user_msg = next((msg['content'] for msg in st.session_state.chat_history if msg['role'] == 'user'), None)
+                
+                if first_user_msg:
+                    # Case 1: User message exists, generate topic from it
+                    topic = first_user_msg.split('?')[0].split('.')[0][:50].strip()
+                    if len(topic) >= 50:
+                        topic += "..."
+                    # Ensure topic is not empty if prompt was just symbols
+                    topic = topic or "General Inquiry"
+                else:
+                    # Case 2: Only file uploads, no user chat (Topic = "No Topic Title")
+                    topic = "No Topic Title"
 
                 new_session = {
+                    'user_id': st.session_state.user_id, # Link to the persistent user ID
                     'id': str(len(st.session_state.saved_chats) + 1).zfill(3),
-                    'topic': topic or "General Spending Inquiry",
+                    'topic': topic, # Use the determined topic
+                    'backend_session_id': st.session_state.session_id, # Store the backend ID
                     'history': st.session_state.chat_history,
                     'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
                 st.session_state.saved_chats.append(new_session)
                 st.toast(f"Current chat saved as: '{new_session['topic']}'")
             
-            # --- Request New Session ID ---
+            # --- 2. Request New Backend Session ID ---
             new_id = get_new_session_id()
             if new_id:
                 st.session_state.session_id = new_id
-                # Reset active chat and navigation page
+                
+                # --- 3. CRITICAL: Reset File Uploader and Chat State ---
+                st.session_state.upload_key += 1 # Reset Uploader
                 st.session_state.chat_history = [
                     {"role": "assistant", "content": "Hello! I'm your Credit Card Spending Analysis Assistant. Please upload your files or ask any questions about your spending."}
                 ]
@@ -332,19 +372,18 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # 2. Upload Files (Updated to call FastAPI)
-    # Use the session state key to enable resetting
+    # 2. Upload Files (Updated key logic)
     uploaded_files = st.file_uploader(
         "📂 Upload Files (PDF, JPG, TXT)",
         type=['pdf', 'jpg', 'jpeg', 'png', 'txt'],
         accept_multiple_files=True,
-        key=f"file_uploader_{st.session_state.upload_key}", # Use the unique key here
+        # IMPORTANT: Use the session state key to enable resetting
+        key=f"file_uploader_{st.session_state.upload_key}", 
         help="Upload your spending records, bill screenshots, etc., for analysis."
     )
     
     if uploaded_files and st.session_state.session_id:
         
-        # Use a list to track successful uploads for the toast message
         successful_uploads = []
         
         for file in uploaded_files:
@@ -387,9 +426,8 @@ with st.sidebar:
         if successful_uploads:
             st.toast(f"Successfully processed {len(successful_uploads)}/{len(uploaded_files)} files.")
             
-            # --- CRITICAL FIX: Reset the file uploader component key ---
-            # This makes Streamlit re-render the file uploader as empty on the next rerun,
-            # preventing the infinite loop.
+            # CRITICAL FIX: Increment the key to force Streamlit to render an empty file uploader 
+            # on the next rerun, preventing the infinite loop.
             st.session_state.upload_key += 1
             
             st.rerun() # Rerun to update chat history with success message and use new key
@@ -405,17 +443,14 @@ with st.sidebar:
     
     # Navigation Buttons
     
-    # Chatbot Button
     if st.button("💬 Chatbot", use_container_width=True, disabled=st.session_state.page == 'chat'):
         st.session_state.page = 'chat'
         st.rerun()
     
-    # Chat History Button (New Feature)
     if st.button("🕰️ Chat History", use_container_width=True, disabled=st.session_state.page == 'history'):
         st.session_state.page = 'history'
         st.rerun()
 
-    # Dashboard Button
     if st.button("📊 Dashboard", use_container_width=True, disabled=st.session_state.page == 'dashboard'):
         st.session_state.page = 'dashboard'
         st.rerun()
