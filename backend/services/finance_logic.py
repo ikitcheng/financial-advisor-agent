@@ -88,38 +88,6 @@ class CreditCardStatementPipeline:
             }
         }
     
-    def load_markdown_file(self, markdown_path: str) -> str:
-        """
-        Load a previously saved markdown file
-        
-        Args:
-            markdown_path: Path to the markdown file to load
-            
-        Returns:
-            String containing the markdown content
-            
-        Raises:
-            FileNotFoundError: If the markdown file doesn't exist
-            UnicodeDecodeError: If the file cannot be decoded as UTF-8
-        """
-        markdown_path = Path(markdown_path)
-        
-        if not markdown_path.exists():
-            raise FileNotFoundError(f"Markdown file not found: {markdown_path}")
-        
-        if not markdown_path.suffix.lower() == '.md':
-            raise ValueError(f"File is not a markdown file: {markdown_path}")
-        
-        try:
-            with open(markdown_path, "r", encoding="utf-8") as f:
-                markdown_content = f.read()
-            
-            print(f"✅ Loaded markdown file: {markdown_path}")
-            return markdown_content
-            
-        except UnicodeDecodeError as e:
-            raise UnicodeDecodeError(f"Could not decode markdown file as UTF-8: {markdown_path}") from e
-        
     def _post_process(self, data: Dict) -> Dict:
         """Post-process extracted json data for consistency"""
         # Sort transactions by date (descending)
@@ -573,6 +541,48 @@ class CreditCardStatementPipeline:
         print(f"\n✅ Batch summary saved to: {summary_path}")
         return results
 
+def load_markdown_file(markdown_path: str) -> str:
+    """
+    Load a previously saved markdown file
+    
+    Args:
+        markdown_path: Path to the markdown file to load
+        
+    Returns:
+        String containing the markdown content
+        
+    Raises:
+        FileNotFoundError: If the markdown file doesn't exist
+        UnicodeDecodeError: If the file cannot be decoded as UTF-8
+    """
+    markdown_path = Path(markdown_path)
+    
+    if not markdown_path.exists():
+        raise FileNotFoundError(f"Markdown file not found: {markdown_path}")
+    
+    if not markdown_path.suffix.lower() == '.md':
+        raise ValueError(f"File is not a markdown file: {markdown_path}")
+    
+    try:
+        with open(markdown_path, "r", encoding="utf-8") as f:
+            markdown_content = f.read()
+        
+        print(f"✅ Loaded markdown file: {markdown_path}")
+        return markdown_content
+        
+    except UnicodeDecodeError as e:
+        raise UnicodeDecodeError(f"Could not decode markdown file as UTF-8: {markdown_path}") from e
+
+def load_json_file(json_path: str) -> Dict:
+    json_path = Path(json_path)
+    
+    if not json_path.exists():
+        print(f"Sample file not found: {json_path}")
+    
+    with open(json_path, 'r', encoding='utf-8') as f:
+        json_data = json.load(f)
+
+    return json_data
 
 # Example usage
 if __name__ == "__main__":
@@ -604,13 +614,8 @@ if __name__ == "__main__":
 
     # Monthly trend analysis example
     # Load multiple months of statement data for trend analysis
-    sample_file = Path(__file__).parent.parent / 'output' / 'credit_card_statements' / '0001_extracted.json'
-    
-    if not sample_file.exists():
-        print(f"Sample file not found: {sample_file}")
-    
-    with open(sample_file, 'r', encoding='utf-8') as f:
-        sample_data = json.load(f)
+    sample_file = "C:\\Users\\matth\\OneDrive\\Matthew\\Company\\eyesquare\\financial-advisor-agent\\backend\\output\\credit_card_statements\\0001_extracted.json"
+    sample_data = load_json_file(json_path=sample_file)
     statements_data = [sample_data]  # Add more statements here for comprehensive analysis
     
     print("\n" + "="*60)
