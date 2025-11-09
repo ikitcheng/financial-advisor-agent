@@ -1,28 +1,12 @@
 import os
 import time
 from typing import Dict, Any, List
+from pymongo import MongoClient
 from dotenv import load_dotenv
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 # We import MongoClient from pymongo, which is the standard Python MongoDB driver.
 # NOTE: This requires 'pymongo' to be installed in the environment (e.g., pip install pymongo).
-try:
-    from pymongo import MongoClient
-    # We include a generic import for connection errors
-    from pymongo.errors import ConnectionError, ServerSelectionTimeoutError
-except ImportError:
-    # Define a Mock client class if pymongo is not installed/available
-    class MongoClient:
-        def __init__(self, *args, **kwargs):
-            print("Warning: pymongo not found. Using Mock client structure.")
-        def __getitem__(self, key):
-            return self
-        def admin(self):
-            return type('MockAdmin', (object,), {'command': lambda x: None})()
-        
-    ConnectionError = Exception
-    ServerSelectionTimeoutError = Exception
-
 
 class MongoDBClient:
     """
@@ -53,7 +37,7 @@ class MongoDBClient:
             self.chats = None 
             self.extraction_results = None
             
-        except (ConnectionError, ServerSelectionTimeoutError, ImportError, Exception) as e:
+        except:
             # Fallback to in-memory dictionaries if connection fails or pymongo is missing
             print(f"ERROR: Could not connect to MongoDB at {MONGO_URL}. Using in-memory mock storage. Error: {type(e).__name__}: {e}")
             
@@ -68,7 +52,7 @@ class MongoDBClient:
         message['session_id'] = session_id
         message['timestamp'] = time.time()
         
-        if self.db: # Real MongoDB connection is active
+        if self.db is not None: # Real MongoDB connection is active
             try:
                 collection = self.db[self.CHAT_COLLECTION]
                 result = collection.insert_one(message)
@@ -94,7 +78,7 @@ class MongoDBClient:
             **extraction_data
         }
         
-        if self.db: # Real MongoDB connection is active
+        if self.db is not None: # Real MongoDB connection is active
             try:
                 collection = self.db[self.EXTRACTION_COLLECTION]
                 result = collection.insert_one(document)
