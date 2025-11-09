@@ -604,7 +604,7 @@ if __name__ == "__main__":
 
     # Monthly trend analysis example
     # Load multiple months of statement data for trend analysis
-    sample_file = Path(__file__).parent / 'backend' / 'output' / 'credit_card_statements' / '0001_extracted.json'
+    sample_file = Path(__file__).parent.parent / 'output' / 'credit_card_statements' / '0001_extracted.json'
     
     if not sample_file.exists():
         print(f"Sample file not found: {sample_file}")
@@ -616,7 +616,9 @@ if __name__ == "__main__":
     print("\n" + "="*60)
     print("MONTHLY TREND ANALYSIS")
     print("="*60)
-    trend_analysis = pipeline.analyze_monthly_trends(statements_data)
+    trend_analysis = pipeline.analyze_monthly_trends(statements_data,
+                                                     output_dir="../output/credit_card_statements/",
+                                                     save_json=True)
 
     if 'error' not in trend_analysis:
         print(f"Analysis Period: {trend_analysis['analysis_period']['start_month']} to {trend_analysis['analysis_period']['end_month']}")
