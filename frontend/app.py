@@ -420,3 +420,7 @@ elif st.session_state.page == 'dashboard':
     render_dashboard()
 elif st.session_state.page == 'history':
     render_chat_history_list()
+
+# To run this app locally, you would execute:
+# cd frontend
+# streamlit run app.py
