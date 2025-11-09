@@ -147,7 +147,9 @@ class CreditCardStatementPipeline:
     def analyze_monthly_trends(
         self,
         statements_data: List[Dict[str, Any]],
-        analysis_months: int = 12
+        analysis_months: int = 12,
+        output_dir: Optional[str] = None,
+        save_json: bool = False,
     ) -> Dict[str, Any]:
         """
         Perform comprehensive monthly trend analysis on credit card statements
@@ -155,7 +157,9 @@ class CreditCardStatementPipeline:
         Args:
             statements_data: List of structured statement data (JSON format)
             analysis_months: Number of months to analyze (default: 12)
-            
+            output_dir: Directory to save analysis output (default: None)
+            save_json: Whether to save the analysis result as a JSON file (default: False)
+
         Returns:
             Dict containing comprehensive trend analysis including:
             - Monthly spending patterns
@@ -247,6 +251,14 @@ class CreditCardStatementPipeline:
             'seasonal_patterns': self._analyze_seasonal_patterns(monthly_data),
             'recommendations': self._generate_recommendations(monthly_data, balances, payment_amounts, spending_amounts)
         }
+
+        if save_json:
+            output_dir = Path(output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            analysis_file_path = output_dir / "analysis.json"
+            with open(analysis_file_path, 'w', encoding='utf-8') as f:
+                json.dump(analysis, f, indent=2, ensure_ascii=False)
+            print(f"\n✅ Analysis result saved to: {analysis_file_path}")
         
         return analysis
     
@@ -605,12 +617,12 @@ if __name__ == "__main__":
     print("MONTHLY TREND ANALYSIS")
     print("="*60)
     trend_analysis = pipeline.analyze_monthly_trends(statements_data)
-    
+
     if 'error' not in trend_analysis:
         print(f"Analysis Period: {trend_analysis['analysis_period']['start_month']} to {trend_analysis['analysis_period']['end_month']}")
         print(f"Financial Health Score: {trend_analysis['financial_health_score']['score']}/100 ({trend_analysis['financial_health_score']['rating']})")
         print(f"Spending Trend: {trend_analysis['spending_trends']}")
-        
+
         if trend_analysis['recommendations']['budgeting']:
             print("\nBudgeting Recommendations:")
             for rec in trend_analysis['recommendations']['budgeting'][:3]:  # Show top 3
