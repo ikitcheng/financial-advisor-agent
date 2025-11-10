@@ -95,7 +95,7 @@ The application follows a simple flow: **Upload → Extract → Index → Query 
 - Pandas (Data manipulation)
 
 **Backend:**
-- FastAPI (REST API framework)
+- FastAPI (API framework)
 - MongoDB (Document storage) with fallback to in-memory storage
 - **LandingAI ADE** – PDF/image parsing + structured field extraction
 - **sentence-transformers** – Semantic embeddings (all-MiniLM-L6-v2, 384-dim)
