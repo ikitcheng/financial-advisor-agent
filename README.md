@@ -10,10 +10,9 @@ Financial Advisor Agent helps users analyze their credit card statements, unders
 
 ## 🎬 Demo
 
-[![Watch Demo](https://img.shields.io/badge/▶️-Watch%20Demo-red?style=for-the-badge&logo=youtube)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
+[![Watch Demo](https://img.shields.io/badge/▶️-Watch%20Demo-red?style=for-the-badge&logo=youtube)](https://www.youtube.com/watch?v=oqlkD0KvhY4)
 
-> **📹 Demo Video:** Replace `YOUR_VIDEO_ID` in the link above with your actual YouTube video ID (e.g., if your video URL is `https://www.youtube.com/watch?v=abc123xyz`, replace `YOUR_VIDEO_ID` with `abc123xyz`)
-
+> **Note:** Demo video includes all features as of November 10th, 2025
 ---
 
 ## 🎯 Use Cases We Cover
