@@ -37,7 +37,7 @@ class MongoDBClient:
             self.chats = None 
             self.extraction_results = None
             
-        except:
+        except Exception as e:
             # Fallback to in-memory dictionaries if connection fails or pymongo is missing
             print(f"ERROR: Could not connect to MongoDB at {MONGO_URL}. Using in-memory mock storage. Error: {type(e).__name__}: {e}")
             
