@@ -235,6 +235,30 @@ def answer_question(task_id: str, question: str, top_k: int = 5) -> Dict[str, An
     instance = get_instance()
     return instance.answer_question(task_id, question, top_k)
 
+def format_answer(answer_dict:dict) -> str:
+    # Format for chat interface (Markdown, wrapped, no horizontal scroll)
+    answer = answer_dict["answer"].strip()
+    # Ensure answer lines are wrapped at ~80 chars for readability
+    import textwrap
+    wrapped_answer = "\n".join(textwrap.wrap(answer, width=80))
+
+    formatted = """**Comprehensive Answer**\n\n"""
+    formatted += wrapped_answer + "\n\n"
+    formatted += "**Citations:**\n"
+    for i, src in enumerate(answer_dict["citations"], 1):
+        # src is a dict with filename, chunk_index, score, etc.
+        filename = src.get("filename", "unknown")
+        chunk = src.get("chunk_index", "-")
+        score = src.get("score", None)
+        score_type = src.get("score_type", "")
+        # Show only filename and chunk, optionally score (rounded)
+        if score is not None:
+            score_str = f" (score: {score:.2f}, {score_type})"
+        else:
+            score_str = ""
+        formatted += f"- [Source {i}] `{filename}` (chunk: {chunk}){score_str}\n"
+    return formatted.strip()
+
 # Example usage
 if __name__ == "__main__":
     # Example: index a document
@@ -247,8 +271,4 @@ if __name__ == "__main__":
     # Ask a question
     user_question = input("Enter your question: ")
     result = answer_question(task_id, user_question)
-    print("\n--- Comprehensive Answer ---\n")
-    print(result["answer"])
-    print("\nCitations:")
-    for i, src in enumerate(result["citations"], 1):
-        print(f"[Source {i}] {src}")
+    print(format_answer(result))

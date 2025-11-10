@@ -9,6 +9,7 @@ from pathlib import Path
 # Import the mock database client (assuming relative path within 'service' directory)
 from services.db_storage import db_client 
 from services.finance_logic import CreditCardStatementPipeline
+from services import rag
 
 # --- Configuration ---
 # NOTE: These paths are simulated. In a real environment, they must exist.
@@ -115,6 +116,18 @@ async def upload_file_and_process(
             save_json=True
         )
         
+        # ---------------------------------------------------
+        # 🔍 7️⃣ Index document for RAG (Hybrid Indexing)
+        # ---------------------------------------------------
+        rag.index_document(
+            task_id=session_id,
+            doc_id=file_name,
+            markdown=extraction_data.get("markdown", ""),
+            extraction_json=extraction_data.get("structured_data", {}),
+            metadata={"filename": file_name}
+        )
+        print(f"✅ Document {file_name} indexed for RAG")
+
     except Exception as e:
         print(f"API Log: Document processing failed: {e}") 
         raise HTTPException(status_code=500, detail="Document analysis failed. Check processing service.")
@@ -147,12 +160,10 @@ async def send_message(session_id: str, message: ChatMessage):
     )
 
     # 2. Mock LLM Response Generation (This is where the LLM call happens)
-    llm_response_content = (
-        f"FastAPI Backend Response for session **{session_id}**: "
-        f"Your message '{message.user_message}' has been processed. "
-        "The LLM retrieved the relevant spending history and suggests focusing on reducing dining costs. "
-        "I've saved this conversation turn to your history."
-    )
+
+    llm_response_dict = rag.answer_question(session_id, message.user_message)
+    llm_response_content = rag.format_answer(llm_response_dict)
+
 
     # 3. Store the assistant's response
     db_client.save_chat_history(
